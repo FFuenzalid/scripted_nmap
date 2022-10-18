@@ -1,60 +1,124 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 
 import time
-import os 
-from datetime import datetime
+import os
+import subprocess
 
-def execute_nmap(source_file, output_file):
+
+def parse_ips(source_file: str) -> list:
     """
-    Takes a file that contains ip's or network segments separated by newlines
-    and returns the raw result of nmap execution of the command explicitly declared below
+    Takes a absolute path to a file where ip's should be stored separated by newlines
+    it return the data as a list containing all of the newlines as elements
 
     Parameters
     ----------
     source_file : string
-        Absolute reference to the file.
-        Example: /home/user/file.txt
-    output_file : string
-        Absolute reference to the file where the output will be stored
-    
+        absolute path to a file where the ip's to scan should be found
+        Example: /home/user/iplist.txt
+
     Returns
     -------
-        On Unix:
-            Status Code of the execution, 0 is ok
-        On Windows:
-            Output of the Terminal
+        a list that contains the ip's of the given file
 
     Examples
     --------
-    >>> execute_nmap(home/user/input.txt, home/user/out/output.txt)
-    0
+    >>> source_file(home/user/out/ip_lists.txt)
+
+    TODO:
+        - check that the newline actually contains a valid ip
+
     """
+    result = []
+    with open(source_file, 'r') as file:
+        file_content = file.readlines()
+        for line in file_content:
+            if not ('/') in line:
+                result.append(line.split()[0])
+            else:
+                print(f'Network {line} found in {source_file}')
+    return result
+
+
+def append_to_file(data: str, output_file: str) -> None:
+    """
+    Takes string data and append it to the output_file file
+
+    Parameters
+    ----------
+    data : string
+        The data that will be appended to the output_file
+        Example: "Hello World!"
+    output_file : string
+        Absolute reference to the file where the output will be stored
+
+    Returns
+    -------
+        None
+
+    Examples
+    --------
+    >>> append_to_file('8.8.8.8', home/user/out/output.txt)
+    >>> append_to_file('Hello World', home/user/out/output.txt)
+    """
+    with open(output_file, 'a') as file:
+        file.write('\n' + data)
+    return None
+
+
+def execute_nmap(ip: str, output_file: str) -> str:
+    """
+    Takes a file that contains ip's separated by newlines
+    and returns the stdout of the execution
+
+    Parameters
+    ----------
+    ip : string
+        The ip address where the nmap command will target.
+        Example: /home/user/file.txt
+    output_file : string
+        Absolute reference to the file where the output will be stored
+
+    Returns
+    -------
+        A String containing the result of the nmap command execution
+
+    Examples
+    --------
+    >>> execute_nmap('8.8.8.8', home/user/out/output.txt)
+    >>> execute_namp('192.168.1.1, home/user/out/output.txt)
+    """
+
     base, filename = os.path.split(output_file)
-    print(base)
-    assert os.path.isfile(source_file), f"The InputFile: {source_file}, Does Not Exist"
     assert os.path.isdir(base), f"The Path: {base}, Doesn't Exist."
 
-    command = f"nmap -sV -T4 -A -v --script vulners.nse -iL {source_file} -oN {output_file}"
-    nmap_exec_code = os.system(command) # For Windows it will be the output of the command
-    return nmap_exec_code
+    command = f'nmap {ip} -sV -T4 -A -v --script vulners.nse'
+    process = subprocess.run(command.split(), capture_output=True, text=True)
 
-def main():
-    now = datetime.now()
+    return process.stdout
+
+
+def main(source_file, output_file):
+    res = parse_ips(source_file)
+    for ip in res:
+        stdout = execute_nmap(ip, output_file)
+        append_to_file(stdout, output_file)
+
+
+if __name__ == '__main__':
+    start_time = time.time()
     pwd = os.getcwd()
-    scan_date = now.strftime("%Y-%m-%d")
 
     INPUT_FILE_NAME = "ip_list.txt"
-    OUTPUT_FILE_NAME = f"scan_{scan_date}.txt"
-    OUTPUT_FOLDER_NAME = "scan"
+    OUTPUT_FOLDER_NAME = "result"
+    OUTPUT_FILE_NAME = "scan.txt"
 
     dest_path = os.path.join(pwd, OUTPUT_FOLDER_NAME)
     source_file = os.path.join(pwd, INPUT_FILE_NAME)
     output_file = os.path.join(dest_path, OUTPUT_FILE_NAME)
 
-    status_code = execute_nmap(source_file, output_file)
-    return status_code
+    main(source_file, output_file)
 
-if __name__ == '__main__':
-    start_time = time.time()
-    main()
-    print(f"{(time.time() - start_time)} seconds")
+    time_log = f"Executed in: {(time.time() - start_time)/60} Minutes."
+    with open(output_file, 'a') as file:
+        file.write(time_log)
