@@ -4,6 +4,7 @@
 import time
 import os
 import subprocess
+import xml.etree.ElementTree as ET
 
 
 def parse_ips(source_file: str) -> list:
@@ -98,7 +99,39 @@ def execute_nmap(ip: str, output_file: str) -> str:
     return process.stdout
 
 
+def read_masscan_xml(source_file):
+    ips = []
+    tree = ET.parse(source_file)
+    root = tree.getroot()
+    for child in root:
+        if child.tag == 'host':
+            host = child
+            for child in host:
+                if child.tag == "address":
+                    ips.append(child.attrib['addr'])
+    return ips
+
+
+def execute_masscan(network: str, initial_port: int, final_port: int, outputfile: str, rate=5000) -> None:
+    base, filename = os.path.split(output_file)
+    assert os.path.isdir(base), f"The Path: {base}, Doesn't Exist."
+
+    command = f'sudo masscan --ports {initial_port}-{final_port} {network} --rate={rate} -oX {output_file}.xml'
+    subprocess.run(command.split())
+    return None
+
+
+def save_masscan_ips(ips: list, source_file: str) -> None:
+    with open(source_file, 'w') as f:
+        f.write('\n'.join(ips))
+
+
 def main(source_file, output_file):
+    network = '66.96.134.1/23'
+    masscan_file_output = 'masscan_result.xml'
+    execute_masscan(network, 0, 100, masscan_file_output, rate=10000)
+    ip_list = read_masscan_xml(masscan_file_output)
+    save_masscan_ips(ip_list, source_file)
     res = parse_ips(source_file)
     for ip in res:
         stdout = execute_nmap(ip, output_file)
