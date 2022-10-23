@@ -100,6 +100,7 @@ def execute_nmap(ip: str, output_file: str) -> str:
 
 
 def read_masscan_xml(source_file):
+    # TODO: docstring
     ips = []
     tree = ET.parse(source_file)
     root = tree.getroot()
@@ -113,6 +114,7 @@ def read_masscan_xml(source_file):
 
 
 def execute_masscan(network: str, initial_port: int, final_port: int, outputfile: str, rate=5000) -> None:
+    # TODO: docstring
     base, filename = os.path.split(output_file)
     assert os.path.isdir(base), f"The Path: {base}, Doesn't Exist."
 
@@ -122,6 +124,7 @@ def execute_masscan(network: str, initial_port: int, final_port: int, outputfile
 
 
 def save_masscan_ips(ips: list, source_file: str) -> None:
+    # TODO: docstring
     with open(source_file, 'w') as f:
         f.write('\n'.join(ips))
 
@@ -139,6 +142,7 @@ def main(source_file, output_file):
 
 
 if __name__ == '__main__':
+    # TODO: do all in main()
     start_time = time.time()
     pwd = os.getcwd()
 
