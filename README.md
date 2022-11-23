@@ -14,8 +14,10 @@ this allow a fastest way to scan large networks for CVE's
 ## Usage
 
 (this isn't the last version i need to add CLI Arguments - 23-11-2022)
-to use it, you need to modify the capitalized variables inside the script
-the important ones are:
+to use it, you need to modify the capitalized variables inside the script.
+
+### the important ones are:
+
 1. NETWORK
 2. MASSCAN_RATE
 3. MASSCAN_INITIAL_PORT
