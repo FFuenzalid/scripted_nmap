@@ -6,15 +6,6 @@ import subprocess
 import xml.etree.ElementTree as ET
 from datetime import datetime
 
-
-"""
-TODO revisar que masscan y nmap esten instalados
-OK ejecutar masscan sobre la network indicada
-OK procesar el resultado de masscan para obtener una lista de las ips que tengan puertos analizables por nmap
-OK ejecutar nmap sobre las ips que contengan servicios que masscan halla detectado
-OK finalizado el programa debe existir un output similar al que emite nmap al ser ejecutado con el script de vulners
-"""
-
 now = datetime.now().strftime("%d-%m-%y_%H-%M-%S")
 
 # TODO all of this should ideally follow POSIX arguments Standards https://realpython.com/python-command-line-arguments/#the-anatomy-of-python-command-line-arguments
