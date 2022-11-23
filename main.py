@@ -1,57 +1,89 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import time
 import os
 import subprocess
 import xml.etree.ElementTree as ET
+from datetime import datetime
 
 
-def parse_ips(source_file: str) -> list:
+"""
+1 revisar que masscan y nmap esten instalados
+2 ejecutar masscan sobre la network indicada
+3 procesar el resultado de masscan para obtener una lista de las ips que tengan puertos analizables por nmap
+4 ejecutar nmap sobre las ips que contengan servicios que masscan halla detectado
+5 finalizado el programa debe existir un output similar al que emite nmap al ser ejecutado con el script de vulners
+"""
+now = datetime.now().strftime("%d-%m-%y_%H-%M-%S")
+
+# TODO all of this should ideally follow POSIX arguments Standards https://realpython.com/python-command-line-arguments/#the-anatomy-of-python-command-line-arguments
+NETWORK = '66.96.134.1/23'
+WORKING_FOLDER = "results"
+MASSCAN_RATE = 5000
+MASSCAN_INITIAL_PORT = 0  # TODO assert lower than 0
+MASSCAN_FINAL_PORT = 65535  # TODO assert biggest than 65535
+
+MASSCAN_FILENAME = f"mass_result_{now}.xml"
+NMAP_OUTPUT_FILENAME = f"nmap_result_{now}.txt"
+
+
+#### DEBUG DATA
+NETWORK = '192.168.1.0/24'
+MASSCAN_RATE = 50
+MASSCAN_FINAL_PORT = 23
+#END DEBUG DATA
+
+script_dir = os.path.realpath(os.path.dirname(__file__))
+results_dir = os.path.join(script_dir, WORKING_FOLDER)
+masscan_result_dir = os.path.join(results_dir, MASSCAN_FILENAME)
+
+
+def main():
+    # TODO Assertions
+    # 1 -> masscan y nmap installed on host
+
+    # 2 -> ports beetwen range
+    assert MASSCAN_INITIAL_PORT >= 0 and MASSCAN_FINAL_PORT <= 65535, f'ports {MASSCAN_INITIAL_PORT}-{MASSCAN_FINAL_PORT} must be between 0 and 65535'
+
+    # 3 -> result folder next to the script file
+    if not os.path.isdir(results_dir):
+        os.mkdir(results_dir)
+
+    # TODO POSIX Argument Parser
+
+    # Main Script
+
+    execute_masscan(NETWORK, MASSCAN_INITIAL_PORT,
+                    MASSCAN_FINAL_PORT, masscan_result_dir, MASSCAN_RATE)
+
+    nmap_targets = parse_masscan_xml(masscan_result_dir)
+
+    for target in nmap_targets:
+        execute_nmap(target[0], target[1], results_dir)
+
+
+def execute_masscan(network: str, initial_port: int, final_port: int, outputfile: str, rate=5000) -> None:
     """
-    Takes a absolute path to a file where ip's should be stored separated by newlines
-    it return the data as a list containing all of the newlines as elements
+    executes masscan program from python, massscan must be installed in the host
 
     Parameters
     ----------
-    source_file : string
-        absolute path to a file where the ip's to scan should be found
-        Example: /home/user/iplist.txt
+    network         : string
+        absolute path to a file where the ip's to scan should be found.
+        Example: '192.168.1.0/24'
 
-    Returns
-    -------
-        a list that contains the ip's of the given file
+    initial_port    : int
+        lower port to be scanned.
 
-    Examples
-    --------
-    >>> source_file(home/user/out/ip_lists.txt)
+    final_port      : int
+        upper port to be scanned.
 
-    TODO:
-        - check that the newline actually contains a valid ip
+    outputfile      : str
+        name of the file that it will output (in the context of this script it will be used by nmap).
+        Example: '/home/usr/result.xml'
 
-    """
-    result = []
-    with open(source_file, 'r') as file:
-        file_content = file.readlines()
-        for line in file_content:
-            if not ('/') in line:
-                result.append(line.split()[0])
-            else:
-                print(f'Network {line} found in {source_file}')
-    return result
-
-
-def append_to_file(data: str, output_file: str) -> None:
-    """
-    Takes string data and append it to the output_file file
-
-    Parameters
-    ----------
-    data : string
-        The data that will be appended to the output_file
-        Example: "Hello World!"
-    output_file : string
-        Absolute reference to the file where the output will be stored
+    rate            : int
+        number of kilobytes per second that masscan will use.
 
     Returns
     -------
@@ -59,24 +91,67 @@ def append_to_file(data: str, output_file: str) -> None:
 
     Examples
     --------
-    >>> append_to_file('8.8.8.8', home/user/out/output.txt)
-    >>> append_to_file('Hello World', home/user/out/output.txt)
+    >>> execute_masscan('192.168.1.0/24', 0, 65536, "result", rate=100)
+
     """
-    with open(output_file, 'a') as file:
-        file.write('\n' + data)
+    base, filename = os.path.split(outputfile)
+    assert os.path.isdir(base), f"The Path: {base}, Doesn't Exist."
+
+    command = f'sudo masscan --ports {initial_port}-{final_port} {network} --rate={rate} -oX {outputfile}'
+    subprocess.run(command.split(), capture_output=True, text=True)
     return None
 
 
-def execute_nmap(ip: str, output_file: str) -> str:
+def parse_masscan_xml(source_file) -> list[tuple]:
     """
-    Takes a file that contains ip's separated by newlines
-    and returns the stdout of the execution
+    read the masscan xml result file and returns every ip where a service was found
+
+    Parameters
+    ----------
+    source_file : string
+        absolute path where the masscan result file is located.
+        if it was created by this script, it should be in the working folder
+
+    Returns
+    -------
+        list of tuples with the combination of (IP, PORT)
+
+    Examples
+    --------
+    >>> parse_masscan_xml('path/to/file.xml')
+
+    """
+    ips = []
+    tree = ET.parse(source_file)
+    root = tree.getroot()
+    for child in root:
+        if child.tag == 'host':
+            detected_host = child
+            for child in detected_host:
+                if child.tag == "address":
+                    detected_ip = child.attrib['addr']
+                elif child.tag == "ports":
+                    for sibling in child:
+                        detected_port = int(sibling.attrib['portid'])
+            service_at = (detected_ip, detected_port)
+            ips.append(service_at)
+    return ips
+
+
+def execute_nmap(ip: str, port: int, result_path: str) -> None:
+    """
+    Takes an ip and a port, and execute nmap with the vulners script on it,
+    the returned data will be appended to /result_path/nmap_result.txt
 
     Parameters
     ----------
     ip : string
         The ip address where the nmap command will target.
-        Example: /home/user/file.txt
+        Example: '192.168.1.1'
+
+    port : int
+        The port of the ip where the nmap scan will run
+
     output_file : string
         Absolute reference to the file where the output will be stored
 
@@ -86,76 +161,23 @@ def execute_nmap(ip: str, output_file: str) -> str:
 
     Examples
     --------
-    >>> execute_nmap('8.8.8.8', home/user/out/output.txt)
-    >>> execute_namp('192.168.1.1, home/user/out/output.txt)
+    >>> execute_nmap('8.8.8.8', 80, '/home/usr/out/output.txt')
+    >>> execute_namp('192.168.1.1', 22, 'home/usr/out/output.txt')
     """
-
-    base, filename = os.path.split(output_file)
-    assert os.path.isdir(base), f"The Path: {base}, Doesn't Exist."
-
-    command = f'nmap {ip} -sV -T4 -A -v --script vulners.nse'
+    output_file = os.path.join(result_path, NMAP_OUTPUT_FILENAME)
+    command = f'nmap {ip} -p {port} -sV -T4 -A -v --script vulners.nse'
     process = subprocess.run(command.split(), capture_output=True, text=True)
 
-    return process.stdout
+    if not os.path.isfile(output_file):
+        with open(output_file, 'x') as newfile:
+            pass
 
+    with open(output_file, 'a') as file:
+        file.write(process.stdout)
+        file.write('\n')
 
-def read_masscan_xml(source_file):
-    # TODO: docstring
-    ips = []
-    tree = ET.parse(source_file)
-    root = tree.getroot()
-    for child in root:
-        if child.tag == 'host':
-            host = child
-            for child in host:
-                if child.tag == "address":
-                    ips.append(child.attrib['addr'])
-    return ips
-
-
-def execute_masscan(network: str, initial_port: int, final_port: int, outputfile: str, rate=5000) -> None:
-    # TODO: docstring
-    base, filename = os.path.split(output_file)
-    assert os.path.isdir(base), f"The Path: {base}, Doesn't Exist."
-
-    command = f'sudo masscan --ports {initial_port}-{final_port} {network} --rate={rate} -oX {output_file}.xml'
-    subprocess.run(command.split())
     return None
 
 
-def save_masscan_ips(ips: list, source_file: str) -> None:
-    # TODO: docstring
-    with open(source_file, 'w') as f:
-        f.write('\n'.join(ips))
-
-
-def main(source_file, output_file):
-    network = '66.96.134.1/23'
-    masscan_file_output = 'masscan_result.xml'
-    execute_masscan(network, 0, 100, masscan_file_output, rate=10000)
-    ip_list = read_masscan_xml(masscan_file_output)
-    save_masscan_ips(ip_list, source_file)
-    res = parse_ips(source_file)
-    for ip in res:
-        stdout = execute_nmap(ip, output_file)
-        append_to_file(stdout, output_file)
-
-
 if __name__ == '__main__':
-    # TODO: do all in main()
-    start_time = time.time()
-    pwd = os.getcwd()
-
-    INPUT_FILE_NAME = "ip_list.txt"
-    OUTPUT_FOLDER_NAME = "result"
-    OUTPUT_FILE_NAME = "scan.txt"
-
-    dest_path = os.path.join(pwd, OUTPUT_FOLDER_NAME)
-    source_file = os.path.join(pwd, INPUT_FILE_NAME)
-    output_file = os.path.join(dest_path, OUTPUT_FILE_NAME)
-
-    main(source_file, output_file)
-
-    time_log = f"Executed in: {(time.time() - start_time)/60} Minutes."
-    with open(output_file, 'a') as file:
-        file.write(time_log)
+    main()

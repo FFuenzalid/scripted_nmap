@@ -10,3 +10,6 @@ scan/
 *.xml
 *.pyc
 scan.txt
+Dockerfile
+/results
+/__pycache__
