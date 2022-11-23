@@ -8,12 +8,13 @@ from datetime import datetime
 
 
 """
-1 revisar que masscan y nmap esten instalados
-2 ejecutar masscan sobre la network indicada
-3 procesar el resultado de masscan para obtener una lista de las ips que tengan puertos analizables por nmap
-4 ejecutar nmap sobre las ips que contengan servicios que masscan halla detectado
-5 finalizado el programa debe existir un output similar al que emite nmap al ser ejecutado con el script de vulners
+TODO revisar que masscan y nmap esten instalados
+OK ejecutar masscan sobre la network indicada
+OK procesar el resultado de masscan para obtener una lista de las ips que tengan puertos analizables por nmap
+OK ejecutar nmap sobre las ips que contengan servicios que masscan halla detectado
+OK finalizado el programa debe existir un output similar al que emite nmap al ser ejecutado con el script de vulners
 """
+
 now = datetime.now().strftime("%d-%m-%y_%H-%M-%S")
 
 # TODO all of this should ideally follow POSIX arguments Standards https://realpython.com/python-command-line-arguments/#the-anatomy-of-python-command-line-arguments
@@ -26,38 +27,26 @@ MASSCAN_FINAL_PORT = 65535  # TODO assert biggest than 65535
 MASSCAN_FILENAME = f"mass_result_{now}.xml"
 NMAP_OUTPUT_FILENAME = f"nmap_result_{now}.txt"
 
-
-#### DEBUG DATA
-NETWORK = '192.168.1.0/24'
-MASSCAN_RATE = 50
-MASSCAN_FINAL_PORT = 23
-#END DEBUG DATA
-
 script_dir = os.path.realpath(os.path.dirname(__file__))
 results_dir = os.path.join(script_dir, WORKING_FOLDER)
 masscan_result_dir = os.path.join(results_dir, MASSCAN_FILENAME)
 
-
 def main():
-    # TODO Assertions
-    # 1 -> masscan y nmap installed on host
+    # Assertions
 
-    # 2 -> ports beetwen range
+    #TODO masscan y nmap installed on host
     assert MASSCAN_INITIAL_PORT >= 0 and MASSCAN_FINAL_PORT <= 65535, f'ports {MASSCAN_INITIAL_PORT}-{MASSCAN_FINAL_PORT} must be between 0 and 65535'
 
-    # 3 -> result folder next to the script file
-    if not os.path.isdir(results_dir):
-        os.mkdir(results_dir)
-
-    # TODO POSIX Argument Parser
+    #TODO POSIX Argument Parser
 
     # Main Script
+    if not os.path.isdir(results_dir):
+        os.mkdir(results_dir)
 
     execute_masscan(NETWORK, MASSCAN_INITIAL_PORT,
                     MASSCAN_FINAL_PORT, masscan_result_dir, MASSCAN_RATE)
 
     nmap_targets = parse_masscan_xml(masscan_result_dir)
-
     for target in nmap_targets:
         execute_nmap(target[0], target[1], results_dir)
 
