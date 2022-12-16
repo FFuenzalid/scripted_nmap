@@ -1,15 +1,6 @@
-ips.py
-test.py
-ips2.txt
-ip_list.txt
-*.html
-ips.py
-command.md
-requerimientos.md
-scan/
-*.xml
-*.pyc
-scan.txt
-Dockerfile
-/results
-/__pycache__
+# Ignore everything:
+*
+
+# Except:
+main.py
+README.md

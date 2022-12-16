@@ -5,39 +5,52 @@ import os
 import subprocess
 import xml.etree.ElementTree as ET
 from datetime import datetime
+import argparse
 
 now = datetime.now().strftime("%d-%m-%y_%H-%M-%S")
 
 # TODO all of this should ideally follow POSIX arguments Standards https://realpython.com/python-command-line-arguments/#the-anatomy-of-python-command-line-arguments
-NETWORK = '66.96.134.1/23'
-WORKING_FOLDER = "results"
-MASSCAN_RATE = 5000
-MASSCAN_INITIAL_PORT = 0  # TODO assert lower than 0
-MASSCAN_FINAL_PORT = 65535  # TODO assert biggest than 65535
+DEFAULT_WORKING_FOLDER = "results"
+DEFAULT_MASSCAN_RATE = 5000
+DEFAULT_MASSCAN_INITIAL_PORT = 1  # TODO assert lower than 1
+DEFAULT_MASSCAN_FINAL_PORT = 65535  # TODO assert biggest than 65535
 
 MASSCAN_FILENAME = f"mass_result_{now}.xml"
 NMAP_OUTPUT_FILENAME = f"nmap_result_{now}.txt"
 
 script_dir = os.path.realpath(os.path.dirname(__file__))
-results_dir = os.path.join(script_dir, WORKING_FOLDER)
+results_dir = os.path.join(script_dir, DEFAULT_WORKING_FOLDER)
 masscan_result_dir = os.path.join(results_dir, MASSCAN_FILENAME)
 
 def main():
     # Assertions
-
     #TODO masscan y nmap installed on host
-    assert MASSCAN_INITIAL_PORT >= 0 and MASSCAN_FINAL_PORT <= 65535, f'ports {MASSCAN_INITIAL_PORT}-{MASSCAN_FINAL_PORT} must be between 0 and 65535'
 
-    #TODO POSIX Argument Parser
+
+    # Process console arguments
+    arguments = catch_arguments()
+
+
+    if arguments.ports:
+        MASSCAN_INITIAL_PORT, MASSCAN_FINAL_PORT = port_parser(arguments.ports)
+    else:
+        MASSCAN_INITIAL_PORT, MASSCAN_FINAL_PORT = DEFAULT_MASSCAN_INITIAL_PORT, DEFAULT_MASSCAN_FINAL_PORT
+    
+    if arguments.rate:
+        assert arguments.rate > 0, f"At 0 rate it will take an eternity. try something bigger"
+        MASSCAN_RATE = arguments.rate
+    else:
+        MASSCAN_RATE = DEFAULT_MASSCAN_RATE
 
     # Main Script
     if not os.path.isdir(results_dir):
         os.mkdir(results_dir)
 
-    execute_masscan(NETWORK, MASSCAN_INITIAL_PORT,
+    execute_masscan(arguments.network, MASSCAN_INITIAL_PORT,
                     MASSCAN_FINAL_PORT, masscan_result_dir, MASSCAN_RATE)
 
     nmap_targets = parse_masscan_xml(masscan_result_dir)
+
     for target in nmap_targets:
         execute_nmap(target[0], target[1], results_dir)
 
@@ -157,6 +170,36 @@ def execute_nmap(ip: str, port: int, result_path: str) -> None:
         file.write('\n')
 
     return None
+
+
+def catch_arguments() -> argparse.Namespace:
+    program_description = "This program will execute nmap with vulners script over the result of an masscan"
+
+    args_parser = argparse.ArgumentParser(
+        prog = "massvulnersmap.py",
+        description = program_description,
+        epilog = "Type massvuln -h for help" 
+    )
+    args_parser.add_argument('network', metavar="IPv4 Network. e.g. 192.168.1.1/24", help="by example: 192.168.1.1/24")
+    args_parser.add_argument('-p', "--ports", type = str,  help = "Initial and final port. Default: 1-65535")
+    args_parser.add_argument("-r", "--rate", type = int, help = "Kb/s of scan, must be an int. Default: 1000")
+    args = args_parser.parse_args()
+    return args
+
+
+def port_parser(port_string: str) -> tuple[int]:
+    ports = port_string.split("-")
+    try:
+        initial_port = int(ports[0])
+        final_port = int(ports[1])
+
+        assert initial_port > 1 and final_port < 65535, "Port range must be between 1 and 65535."
+        assert initial_port < final_port, f"{final_port} must be bigger than {initial_port}."
+
+        return (initial_port, final_port)
+    except ValueError:
+        print("Error parsing ports. Try something like: 22-23")
+        raise SystemExit
 
 
 if __name__ == '__main__':
