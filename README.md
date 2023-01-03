@@ -27,5 +27,13 @@ when it finally ends, it will give you two outputs
 and xml with all ip's with a service detected by masscan
 and a txt file that contains vulnerabilities asociated to every service founded
 
+## Disclaimer
+
+The use of this tool is at the user's own risk. We will not be liable for any damages or harm that may occur as a result of the use of the tool. 
+The user is solely responsible for ensuring that their use of the tool complies with all applicable laws and regulations. 
+We will not be responsible for any breach of laws and regulations by the user.
+
+Use it with caution.
+
 ---------------------------------------------------------------------
 by ffuenzalid
