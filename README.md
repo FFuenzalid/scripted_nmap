@@ -14,7 +14,7 @@ this allow a fastest way to scan large networks for CVE's
 
 ## Usage
 
-python3 massvmap.py [Network] [-p --ports 1-65535] [-r --rate 5000]
+python3 main.py [Network] [-p --ports 1-65535] [-r --rate 5000]
 
 ## Protips
 
