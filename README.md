@@ -1,8 +1,9 @@
-# SCRIPTED_NMAP: a fastest way to scan vulnerabilities over a network
+# MassVMap: a fastest way to scan vulnerabilities over a network
 ---------------------------------------------------------------------
 
-this script accelerates nmap vulners script by previously filtering a network via masscan fast scan
+this script accelerates nmap vulners script by previously filtering a the network scan via a masscan fast scan
 then for every occurrency of masscan executes nmap over it with the vulners script
+then it will append all of the data founded to a TXT file (this will change in the future i want a JSON as output)
 this allow a fastest way to scan large networks for CVE's
 
 ## Dependencies
@@ -13,19 +14,11 @@ this allow a fastest way to scan large networks for CVE's
 
 ## Usage
 
-(this isn't the last version i need to add CLI Arguments - 23-11-2022)
-to use it, you need to modify the capitalized variables inside the script.
+python3 massvmap.py [Network] [-p --ports 1-65535] [-r --rate 5000]
 
-### the important ones are:
+## Protips
 
-1. NETWORK
-2. MASSCAN_RATE
-3. MASSCAN_INITIAL_PORT
-4. MASSCAN_FINAL_PORT
-
-then you should put this on a crontab file
-you can do it by
-
+a better way to use this script is to add id to the sudo crontab
 ```sudo crontab -e```
 
 depending on the network and scan rate this can take a while

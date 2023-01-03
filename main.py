@@ -7,9 +7,8 @@ import xml.etree.ElementTree as ET
 from datetime import datetime
 import argparse
 
-now = datetime.now().strftime("%d-%m-%y_%H-%M-%S")
+now = datetime.now().strftime("%d-%m-%y %H-%M-%S")
 
-# TODO all of this should ideally follow POSIX arguments Standards https://realpython.com/python-command-line-arguments/#the-anatomy-of-python-command-line-arguments
 DEFAULT_WORKING_FOLDER = "results"
 DEFAULT_MASSCAN_RATE = 5000
 DEFAULT_MASSCAN_INITIAL_PORT = 1  # TODO assert lower than 1
@@ -22,14 +21,13 @@ script_dir = os.path.realpath(os.path.dirname(__file__))
 results_dir = os.path.join(script_dir, DEFAULT_WORKING_FOLDER)
 masscan_result_dir = os.path.join(results_dir, MASSCAN_FILENAME)
 
-def main():
+
+def main() -> None:
     # Assertions
     #TODO masscan y nmap installed on host
 
-
     # Process console arguments
     arguments = catch_arguments()
-
 
     if arguments.ports:
         MASSCAN_INITIAL_PORT, MASSCAN_FINAL_PORT = port_parser(arguments.ports)
@@ -90,8 +88,9 @@ def execute_masscan(network: str, initial_port: int, final_port: int, outputfile
     base, filename = os.path.split(outputfile)
     assert os.path.isdir(base), f"The Path: {base}, Doesn't Exist."
 
-    command = f'sudo masscan --ports {initial_port}-{final_port} {network} --rate={rate} -oX {outputfile}'
-    subprocess.run(command.split(), capture_output=True, text=True)
+    # This command has all of the options but lack the output path, this is bcuz split can broke the path
+    command = f'sudo masscan --ports {initial_port}-{final_port} {network} --rate={rate} -oX'
+    subprocess.run(command.split() + [outputfile], capture_output=True, text=True)
     return None
 
 
@@ -173,6 +172,7 @@ def execute_nmap(ip: str, port: int, result_path: str) -> None:
 
 
 def catch_arguments() -> argparse.Namespace:
+    # This function adds CLI Arguments usage
     program_description = "This program will execute nmap with vulners script over the result of an masscan"
 
     args_parser = argparse.ArgumentParser(
@@ -188,6 +188,7 @@ def catch_arguments() -> argparse.Namespace:
 
 
 def port_parser(port_string: str) -> tuple[int]:
+    # This function parses a port string with 'int-int' format
     ports = port_string.split("-")
     try:
         initial_port = int(ports[0])

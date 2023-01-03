@@ -2,5 +2,5 @@
 *
 
 # Except:
-main.py
-README.md
+!main.py
+!README.md
